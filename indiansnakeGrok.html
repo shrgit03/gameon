@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+            background-color: #fff;
+        }
+        #score {
+            font-size: 24px;
+            margin: 10px 0;
+        }
+        #gameOver {
+            display: none;
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div id="gameOver">
+        <h2>Game Over!</h2>
+        <p>Final Score: <span id="finalScore"></span></p>
+        <button onclick="restartGame()">Restart</button>
+    </div>
+    <audio id="backgroundMusic" loop>
+        <source src="background.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const music = document.getElementById('backgroundMusic');
+
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+        let snake = [{ x: 10, y: 10 }];
+        let food = { x: 15, y: 15 };
+        let dx = 0;
+        let dy = 0;
+        let score = 0;
+        let speed = 100;
+        let foodCount = 0;
+        let gameLoop;
+
+        music.play().catch(e => console.log("Music play failed:", e));
+
+        function drawGame() {
+            // Clear canvas
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Move snake
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head);
+
+            // Check if snake ate food
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                foodCount++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                generateFood();
+                
+                // Increase speed every 5 food items
+                if (foodCount % 5 === 0) {
+                    clearInterval(gameLoop);
+                    speed = speed / 1.5;
+                    gameLoop = setInterval(drawGame, speed);
+                }
+            } else {
+                snake.pop();
+            }
+
+            // Draw snake
+            snake.forEach(segment => {
+                ctx.font = '20px Arial';
+                ctx.fillText('🐍', segment.x * gridSize, segment.y * gridSize + 15);
+            });
+
+            // Draw food
+            ctx.font = '20px Arial';
+            ctx.fillText('🍼', food.x * gridSize, food.y * gridSize + 15);
+
+            // Check collision with walls
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameOver();
+            }
+
+            // Check collision with self
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameOver();
+                }
+            }
+        }
+
+        function generateFood() {
+            food.x = Math.floor(Math.random() * tileCount);
+            food.y = Math.floor(Math.random() * tileCount);
+            
+            // Ensure food doesn't spawn on snake
+            snake.forEach(segment => {
+                if (food.x === segment.x && food.y === segment.y) {
+                    generateFood();
+                }
+            });
+        }
+
+        function gameOver() {
+            clearInterval(gameLoop);
+            music.pause();
+            finalScoreDisplay.textContent = score;
+            gameOverScreen.style.display = 'block';
+        }
+
+        function restartGame() {
+            snake = [{ x: 10, y: 10 }];
+            food = { x: 15, y: 15 };
+            dx = 0;
+            dy = 0;
+            score = 0;
+            speed = 100;
+            foodCount = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            gameOverScreen.style.display = 'none';
+            music.currentTime = 0;
+            music.play();
+            gameLoop = setInterval(drawGame, speed);
+        }
+
+        document.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowUp':
+                    if (dy === 0) { dx = 0; dy = -1; }
+                    break;
+                case 'ArrowDown':
+                    if (dy === 0) { dx = 0; dy = 1; }
+                    break;
+                case 'ArrowLeft':
+                    if (dx === 0) { dx = -1; dy = 0; }
+                    break;
+                case 'ArrowRight':
+                    if (dx === 0) { dx = 1; dy = 0; }
+                    break;
+            }
+        });
+
+        // Start the game
+        gameLoop = setInterval(drawGame, speed);
+    </script>
+</body>
+</html>
